@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BlockWorld 3D - Roblox Style Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        #stats-panel {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            border-left: 4px solid #00ff88;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            pointer-events: auto;
+            min-width: 200px;
+        }
+        
+        #inventory-panel {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            border-left: 4px solid #ffaa00;
+            pointer-events: auto;
+            min-width: 250px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .stat-label {
+            color: #aaa;
+        }
+        
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .inventory-slot {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+        }
+        
+        .inventory-slot.selected {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.2);
+            transform: scale(1.05);
+        }
+        
+        .inventory-slot:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .slot-icon {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+        
+        .slot-name {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .slot-count {
+            font-size: 11px;
+            color: #00ff88;
+            margin-top: 3px;
+        }
+        
+        #controls-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            gap: 30px;
+            z-index: 100;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        
+        .key {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 50;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        
+        #crosshair::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        #message-area {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 200;
+            display: none;
+            backdrop-filter: blur(5px);
+            border-left: 4px solid #00ff88;
+        }
+        
+        #mobile-controls {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            display: none;
+            grid-template-columns: repeat(3, 70px);
+            gap: 10px;
+            z-index: 300;
+        }
+        
+        .mobile-btn {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 15px;
+            color: white;
+            font-size: 30px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .mobile-btn:active {
+            background: #00ff88;
+            color: black;
+        }
+        
+        @media (max-width: 768px) {
+            #mobile-controls { display: grid; }
+            #controls-panel { display: none; }
+            #stats-panel { font-size: 12px; min-width: 150px; }
+            #inventory-panel { min-width: 200px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="stats-panel">
+            <h3>📊 PLAYER STATS</h3>
+            <div class="stat-row">
+                <span class="stat-label">📍 Posisi X:</span>
+                <span class="stat-value" id="pos-x">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">📍 Posisi Y:</span>
+                <span class="stat-value" id="pos-y">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">📍 Posisi Z:</span>
+                <span class="stat-value" id="pos-z">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">🎮 Mode:</span>
+                <span class="stat-value" id="game-mode">Build</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">🔨 Blocks Placed:</span>
+                <span class="stat-value" id="block-count">0</span>
+            </div>
+        </div>
+        
+        <div id="inventory-panel">
+            <h3>🎒 INVENTORY</h3>
+            <div class="inventory-grid" id="inventory-grid">
+                <!-- Inventory slots will be populated by JS -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="crosshair"></div>
+    
+    <div id="message-area">✨ Block Placed!</div>
+    
+    <div id="controls-panel">
+        <span><span class="key">WASD</span> Move</span>
+        <span><span class="key">Space</span> Jump</span>
+        <span><span class="key">Shift</span> Fly</span>
+        <span><span class="key">Click</span> Place Block</span>
+        <span><span class="key">F</span> Remove</span>
+        <span><span class="key">1-3</span> Select</span>
+    </div>
+    
+    <div id="mobile-controls">
+        <div></div>
+        <div class="mobile-btn" id="mobile-up">⬆️</div>
+        <div></div>
+        <div class="mobile-btn" id="mobile-left">⬅️</div>
+        <div class="mobile-btn" id="mobile-down">⬇️</div>
+        <div class="mobile-btn" id="mobile-right">➡️</div>
+        <div class="mobile-btn" id="mobile-jump">🦘</div>
+        <div class="mobile-btn" id="mobile-place">🔨</div>
+        <div class="mobile-btn" id="mobile-remove">❌</div>
+    </div>
+
+    <!-- Import Three.js dari CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
+        import { PointerLockControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/PointerLockControls.js';
+        
+        // --- INISIALISASI THREE.JS ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue
+        scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(10, 5, 15);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+        
+        // --- CONTROLS (First Person Style dengan PointerLock) ---
+        const controls = new PointerLockControls(camera, document.body);
+        
+        // UI untuk pointer lock
+        const instructions = document.getElementById('message-area');
+        
+        controls.addEventListener('lock', () => {
+            instructions.style.display = 'none';
+        });
+        
+        controls.addEventListener('unlock', () => {
+            instructions.style.display = 'block';
+            instructions.textContent = '🔒 Klik layar untuk mengunci kontrol';
+        });
+        
+        // Klik untuk lock
+        renderer.domElement.addEventListener('click', () => {
+            controls.lock();
+        });
+        
+        scene.add(controls.getObject());
+        
+        // --- PENCAHAYAAN ---
+        // Ambient light
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        
+        // Directional light (matahari)
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(20, 30, 10);
+        dirLight.castShadow = true;
+        dirLight.receiveShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        const d = 40;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        dirLight.shadow.camera.near = 1;
+        dirLight.shadow.camera.far = 60;
+        scene.add(dirLight);
+        
+        // Tambahan point lights untuk efek
+        const pointLight1 = new THREE.PointLight(0xffaa00, 0.5);
+        pointLight1.position.set(10, 10, 10);
+        scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0x00aaff, 0.5);
+        pointLight2.position.set(-10, 5, -10);
+        scene.add(pointLight2);
+        
+        // --- LANTAI DASAR (GROUND) ---
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x3a7e3a,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // Grid helper
+        const gridHelper = new THREE.GridHelper(100, 20, 0xffffff, 0x888888);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+        
+        // --- SISTEM BUILDING (BLOCK WORLD) ---
+        // Array untuk menyimpan semua block yang ditempatkan
+        const blocks = [];
+        const blockSize = 2; // Ukuran block 2 unit
+        
+        // Material untuk berbagai tipe block
+        const blockMaterials = {
+            'wood': new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 }),
+            'stone': new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.9 }),
+            'grass': new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.6 }),
+            'dirt': new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.8 }),
+            'brick': new THREE.MeshStandardMaterial({ color: 0xb22222, roughness: 0.5 }),
+            'gold': new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0x442200, roughness: 0.3 })
+        };
+        
+        // Inventory system
+        const inventory = [
+            { type: 'wood', name: 'Kayu', icon: '🪵', count: 50 },
+            { type: 'stone', name: 'Batu', icon: '🪨', count: 30 },
+            { type: 'grass', name: 'Rumput', icon: '🌿', count: 40 },
+            { type: 'dirt', name: 'Tanah', icon: '🟫', count: 25 },
+            { type: 'brick', name: 'Bata', icon: '🧱', count: 20 },
+            { type: 'gold', name: 'Emas', icon: '🪙', count: 10 }
+        ];
+        
+        let selectedSlot = 0; // Slot yang dipilih (0-index)
+        
+        // Fungsi untuk update tampilan inventory
+        function updateInventoryUI() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            inventory.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = `inventory-slot ${index === selectedSlot ? 'selected' : ''}`;
+                slot.innerHTML = `
+                    <div class="slot-icon">${item.icon}</div>
+                    <div class="slot-name">${item.name}</div>
+                    <div class="slot-count">${item.count}</div>
+                `;
+                slot.addEventListener('click', () => {
+                    selectedSlot = index;
+                    updateInventoryUI();
+                    showMessage(`Selected: ${item.name}`);
+                });
+                grid.appendChild(slot);
+            });
+        }
+        
+        // Fungsi untuk menampilkan pesan
+        function showMessage(text, isError = false) {
+            const msg = document.getElementById('message-area');
+            msg.textContent = text;
+            msg.style.display = 'block';
+            msg.style.borderLeftColor = isError ? '#ff4444' : '#00ff88';
+            
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 1500);
+        }
+        
+        // Fungsi untuk menempatkan block
+        function placeBlock() {
+            const cameraPos = controls.getObject().position.clone();
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            
+            // Raycast untuk deteksi posisi block
+            const raycaster = new THREE.Raycaster(cameraPos, direction);
+            const intersects = raycaster.intersectObjects(blocks);
+            
+            let placePosition;
+            
+            if (intersects.length > 0) {
+                // Jika menyentuh block yang sudah ada, tempatkan di depan block tersebut
+                const hit = intersects[0];
+                const blockPos = hit.object.position.clone();
+                const normal = hit.face.normal.clone();
+                
+                placePosition = blockPos.add(normal.multiplyScalar(blockSize));
+            } else {
+                // Jika tidak menyentuh block, tempatkan di depan kamera dengan jarak tertentu
+                placePosition = cameraPos.clone().add(direction.multiplyScalar(5));
+                // Snap ke grid
+                placePosition.x = Math.round(placePosition.x / blockSize) * blockSize;
+                placePosition.y = Math.round(placePosition.y / blockSize) * blockSize;
+                placePosition.z = Math.round(placePosition.z / blockSize) * blockSize;
+            }
+            
+            // Cek apakah posisi sudah ditempati
+            const occupied = blocks.some(block => 
+                Math.abs(block.position.x - placePosition.x) < 0.1 &&
+                Math.abs(block.position.y - placePosition.y) < 0.1 &&
+                Math.abs(block.position.z - placePosition.z) < 0.1
+            );
+            
+            if (occupied) {
+                showMessage('❌ Posisi sudah terisi!', true);
+                return;
+            }
+            
+            // Cek inventory
+            const selectedItem = inventory[selectedSlot];
+            if (selectedItem.count <= 0) {
+                showMessage('❌ Stok habis!', true);
+                return;
+            }
+            
+            // Buat block baru
+            const blockGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+            const blockMat = blockMaterials[selectedItem.type].clone();
+            const block = new THREE.Mesh(blockGeo, blockMat);
+            
+            block.position.copy(placePosition);
+            block.castShadow = true;
+            block.receiveShadow = true;
+            
+            // Tambahkan edge outline
+            const edges = new THREE.EdgesGeometry(blockGeo);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+            block.add(line);
+            
+            scene.add(block);
+            blocks.push(block);
+            
+            // Kurangi inventory
+            selectedItem.count--;
+            
+            // Update UI
+            updateInventoryUI();
+            document.getElementById('block-count').textContent = blocks.length;
+            
+            showMessage(`✅ ${selectedItem.name} ditempatkan!`);
+        }
+        
+        // Fungsi untuk menghapus block
+        function removeBlock() {
+            const cameraPos = controls.getObject().position.clone();
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            
+            const raycaster = new THREE.Raycaster(cameraPos, direction, 0, 10);
+            const intersects = raycaster.intersectObjects(blocks);
+            
+            if (intersects.length > 0) {
+                const hitBlock = intersects[0].object;
+                
+                // Cari tipe block untuk menambah inventory
+                const blockColor = hitBlock.material.color.getHex();
+                let blockType = null;
+                
+                for (const [type, material] of Object.entries(blockMaterials)) {
+                    if (material.color.getHex() === blockColor) {
+                        blockType = type;
+                        break;
+                    }
+                }
+                
+                if (blockType) {
+                    // Tambah ke inventory
+                    const invItem = inventory.find(item => item.type === blockType);
+                    if (invItem) {
+                        invItem.count++;
+                    }
+                }
+                
+                // Hapus dari scene
+                scene.remove(hitBlock);
+                const index = blocks.indexOf(hitBlock);
+                if (index > -1) blocks.splice(index, 1);
+                
+                updateInventoryUI();
+                document.getElementById('block-count').textContent = blocks.length;
+                showMessage('🗑️ Block dihapus!');
+            } else {
+                showMessage('❌ Tidak ada block yang dituju', true);
+            }
+        }
+        
+        // --- KARAKTER PLAYER SEDERHANA (untuk representasi) ---
+        function createPlayerRepresentation() {
+            const playerGroup = new THREE.Group();
+            
+            // Body
+            const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x44aaff });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.9;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            playerGroup.add(body);
+            
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.4, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffaa88 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.8;
+            head.castShadow = true;
+            playerGroup.add(head);
+            
+            // Arms
+            const armGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.8);
+            const armMat = new THREE.MeshStandardMaterial({ color: 0x44aaff });
+            
+            const leftArm = new THREE.Mesh(armGeo, armMat);
+            leftArm.position.set(-0.7, 1.2, 0);
+            leftArm.rotation.z = 0.3;
+            leftArm.castShadow = true;
+            playerGroup.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeo, armMat);
+            rightArm.position.set(0.7, 1.2, 0);
+            rightArm.rotation.z = -0.3;
+            rightArm.castShadow = true;
+            playerGroup.add(rightArm);
+            
+            // Legs
+            const legGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.8);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x44aaff });
+            
+            const leftLeg = new THREE.Mesh(legGeo, legMat);
+            leftLeg.position.set(-0.3, 0.4, 0);
+            leftLeg.castShadow = true;
+            playerGroup.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeo, legMat);
+            rightLeg.position.set(0.3, 0.4, 0);
+            rightLeg.castShadow = true;
+            playerGroup.add(rightLeg);
+            
+            // Tambahkan ke scene di posisi kamera? Kita akan update di animate
+            return playerGroup;
+        }
+        
+        const playerModel = createPlayerRepresentation();
+        scene.add(playerModel);
+        
+        // --- OBJEK DEKORASI (Pohon sederhana) ---
+        function createTree(x, z) {
+            const treeGroup = new THREE.Group();
+            
+            // Batang
+            const trunkGeo = new THREE.CylinderGeometry(0.5, 0.6, 3);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 1.5;
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            treeGroup.add(trunk);
+            
+            // Daun (beberapa layer)
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57 });
+            
+            const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.5, 8), leafMat);
+            leaf1.position.y = 3.0;
+            leaf1.castShadow = true;
+            leaf1.receiveShadow = true;
+            treeGroup.add(leaf1);
+            
+            const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 8), leafMat);
+            leaf2.position.y = 4.0;
+            leaf2.castShadow = true;
+            leaf2.receiveShadow = true;
+            treeGroup.add(leaf2);
+            
+            treeGroup.position.set(x, 1.5, z);
+            return treeGroup;
+        }
+        
+        // Tambahkan beberapa pohon
+        scene.add(createTree(15, 15));
+        scene.add(createTree(-15, 15));
+        scene.add(createTree(15, -15));
+        scene.add(createTree(-15, -15));
+        scene.add(createTree(20, 5));
+        scene.add(createTree(-20, -5));
+        
+        // Tambahkan batu-batu
+        for (let i = 0; i < 10; i++) {
+            const rockGeo = new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.5);
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
+            const rock = new THREE.Mesh(rockGeo, rockMat);
+            rock.position.set(
+                (Math.random() - 0.5) * 40,
+                0.5,
+                (Math.random() - 0.5) * 40
+            );
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            scene.add(rock);
+        }
+        
+        // --- VARIABEL KONTROL ---
+        const keyState = {
+            w: false, a: false, s: false, d: false,
+            space: false, shift: false
+        };
+        
+        const moveSpeed = 0.2;
+        const flySpeed = 0.3;
+        let velocityY = 0;
+        let isGrounded = true;
+        let flyMode = false;
+        const gravity = 0.02;
+        const jumpPower = 0.4;
+        
+        // --- EVENT LISTENERS ---
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'KeyW': keyState.w = true; e.preventDefault(); break;
+                case 'KeyA': keyState.a = true; e.preventDefault(); break;
+                case 'KeyS': keyState.s = true; e.preventDefault(); break;
+                case 'KeyD': keyState.d = true; e.preventDefault(); break;
+                case 'Space': 
+                    if (flyMode) {
+                        velocityY = flySpeed;
+                    } else if (isGrounded) {
+                        velocityY = jumpPower;
+                        isGrounded = false;
+                    }
+                    e.preventDefault(); 
+                    break;
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    flyMode = !flyMode;
+                    document.getElementById('game-mode').textContent = flyMode ? 'Fly' : 'Build';
+                    showMessage(`Mode: ${flyMode ? 'Terbang' : 'Build'}`);
+                    e.preventDefault();
+                    break;
+                case 'KeyF':
+                    removeBlock();
+                    e.preventDefault();
+                    break;
+                case 'Digit1': selectedSlot = 0; updateInventoryUI(); showMessage(`Selected: ${inventory[0].name}`); break;
+                case 'Digit2': selectedSlot = 1; updateInventoryUI(); showMessage(`Selected: ${inventory[1].name}`); break;
+                case 'Digit3': selectedSlot = 2; updateInventoryUI(); showMessage(`Selected: ${inventory[2].name}`); break;
+                case 'Digit4': selectedSlot = 3; updateInventoryUI(); showMessage(`Selected: ${inventory[3].name}`); break;
+                case 'Digit5': selectedSlot = 4; updateInventoryUI(); showMessage(`Selected: ${inventory[4].name}`); break;
+                case 'Digit6': selectedSlot = 5; updateInventoryUI(); showMessage(`Selected: ${inventory[5].name}`); break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'KeyW': keyState.w = false; e.preventDefault(); break;
+                case 'KeyA': keyState.a = false; e.preventDefault(); break;
+                case 'KeyS': keyState.s = false; e.preventDefault(); break;
+                case 'KeyD': keyState.d = false; e.preventDefault(); break;
+            }
+        });
+        
+        // Mouse click untuk place block
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            if (e.button === 0 && document.pointerLockElement === renderer.domElement) {
+                placeBlock();
+            }
+        });
+        
+        // Mobile controls
+        document.getElementById('mobile-up').addEventListener('touchstart', (e) => { e.preventDefault(); keyState.w = true; });
+        document.getElementById('mobile-up').addEventListener('touchend', (e) => { e.preventDefault(); keyState.w = false; });
+        document.getElementById('mobile-down').addEventListener('touchstart', (e) => { e.preventDefault(); keyState.s = true; });
+        document.getElementById('mobile-down').addEventListener('touchend', (e) => { e.preventDefault(); keyState.s = false; });
+        document.getElementById('mobile-left').addEventListener('touchstart', (e) => { e.preventDefault(); keyState.a = true; });
+        document.getElementById('mobile-left').addEventListener('touchend', (e) => { e.preventDefault(); keyState.a = false; });
+        document.getElementById('mobile-right').addEventListener('touchstart', (e) => { e.preventDefault(); keyState.d = true; });
+        document.getElementById('mobile-right').addEventListener('touchend', (e) => { e.preventDefault(); keyState.d = false; });
+        document.getElementById('mobile-jump').addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            if (flyMode) {
+                velocityY = flySpeed;
+            } else if (isGrounded) {
+                velocityY = jumpPower;
+                isGrounded = false;
+            }
+        });
+        document.getElementById('mobile-place').addEventListener('touchstart', (e) => { e.preventDefault(); placeBlock(); });
+        document.getElementById('mobile-remove').addEventListener('touchstart', (e) => { e.preventDefault(); removeBlock(); });
+        
+        // --- FUNGSI UPDATE POSISI PLAYER ---
+        function updatePlayer() {
+            const player = controls.getObject();
+            
+            // Hitung arah gerak berdasarkan rotasi kamera
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            direction.y = 0;
+            direction.normalize();
+            
+            const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), direction).normalize();
+            
+            let moveX = 0;
+            let moveZ = 0;
+            
+            if (keyState.w) { moveX += direction.x; moveZ += direction.z; }
+            if (keyState.s) { moveX -= direction.x; moveZ -= direction.z; }
+            if (keyState.a) { moveX += right.x; moveZ += right.z; }
+            if (keyState.d) { moveX -= right.x; moveZ -= right.z; }
+            
+            // Normalisasi untuk gerak diagonal
+            if (moveX !== 0 || moveZ !== 0) {
+                const length = Math.sqrt(moveX*moveX + moveZ*moveZ);
+                moveX = moveX / length * (flyMode ? flySpeed : moveSpeed);
+                moveZ = moveZ / length * (flyMode ? flySpeed : moveSpeed);
+            }
+            
+            // Update posisi player
+            player.position.x += moveX;
+            player.position.z += moveZ;
+            
+            // Batasi area
+            player.position.x = Math.max(-45, Math.min(45, player.position.x));
+            player.position.z = Math.max(-45, Math.min(45, player.position.z));
+            
+            // Fisika (jika tidak fly mode)
+            if (!flyMode) {
+                velocityY -= gravity;
+                player.position.y += velocityY;
+                
+                // Cek collision dengan ground dan blocks
+                if (player.position.y <= 2.0) {
+                    player.position.y = 2.0;
+                    velocityY = 0;
+                    isGrounded = true;
+                } else {
+                    isGrounded = false;
+                }
+            } else {
+                // Mode terbang - kontrol Y dengan space
+                if (keyState.space) {
+                    player.position.y += flySpeed;
+                }
+            }
+            
+            // Update posisi model player mengikuti kamera
+            playerModel.position.copy(player.position);
+            playerModel.position.y -= 1.0; // Sesuaikan dengan tinggi kamera
+            
+            // Update UI stats
+            document.getElementById('pos-x').textContent = player.position.x.toFixed(2);
+            document.getElementById('pos-y').textContent = player.position.y.toFixed(2);
+            document.getElementById('pos-z').textContent = player.position.z.toFixed(2);
+        }
+        
+        // --- ANIMASI LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updatePlayer();
+            
+            // Animasi sederhana untuk player model (berjalan)
+            if (keyState.w || keyState.s || keyState.a || keyState.d) {
+                playerModel.rotation.y += 0.02;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // --- RESIZE HANDLER ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // --- INITIAL SETUP ---
+        updateInventoryUI();
+        showMessage('🎮 Game siap! Klik layar untuk mulai');
+        
+        // Tambahkan beberapa block awal sebagai contoh
+        setTimeout(() => {
+            // Buat beberapa block di sekitar spawn
+            for (let x = -4; x <= 4; x += 2) {
+                for (let z = -4; z <= 4; z += 2) {
+                    if (x === 0 && z === 0) continue;
+                    
+                    const blockGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+                    const randomType = ['wood', 'stone', 'grass'][Math.floor(Math.random() * 3)];
+                    const blockMat = blockMaterials[randomType].clone();
+                    const block = new THREE.Mesh(blockGeo, blockMat);
+                    
+                    block.position.set(x, 1, z);
+                    block.castShadow = true;
+                    block.receiveShadow = true;
+                    
+                    const edges = new THREE.EdgesGeometry(blockGeo);
+                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+                    block.add(line);
+                    
+                    scene.add(block);
+                    blocks.push(block);
+                }
+            }
+            document.getElementById('block-count').textContent = blocks.length;
+        }, 1000);
+    </script>
+</body>
+</html>
